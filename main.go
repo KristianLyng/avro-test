@@ -1,3 +1,51 @@
+/*
+ * avro-test - various encoder/decoder tests
+ *
+ * Copyright (c) 2022 Telenor Norge AS
+ * Author(s):
+ *  - Kristian Lyngstøl <kly@kly.no>
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+ * 02110-1301  USA
+ */
+
+/*
+Package main / avro-test facilitates various benchmarks of naive
+implementations of various encoders and decoders. They are naive in the
+sense that they do not re-use encoder-objects, which particularly for
+GOB, introduces a very significant overhead.
+
+The tests are meant to benchmark the encodings for use in a setting where
+they need to be completely isolated from the transport layer, which means
+things like disconnects are invisible to the enocder, thus the encoder
+can't make an intelligent decision on when to re-send headers.
+
+The tests come in two version: Pure benchmark in the style of go testing,
+to run them use:
+
+	go test -bench=.*
+
+The other type of tests measure the size of the encoded data, run them by
+building the package and running the regular binary.
+
+	go build ./
+	./avro-test
+
+Again, these are naive and trivial tests - do not put too much value in
+them beyond these very specific use cases.
+*/
 package main
 
 import (
@@ -49,6 +97,7 @@ func decompressIt(b []byte) ([]byte) {
 	return dec
 }
 
+// MakeMetric generates a skogul.Metric with some quasi-reasonable setup.
 func MakeMetric() *skogul.Metric {
 	m := skogul.Metric{}
 	now := time.Now()
@@ -80,11 +129,15 @@ func MakeMetric() *skogul.Metric {
 	return &m
 }
 
+// Prep contains the parsed avro schema and the container to test
 type Prep struct {
 	Schema avro.Schema
 	In	skogul.Container
 }
 
+// Init generates the container for testing and reads the avro schema.
+// Needs to be separate from main() because the test cases/benchmarks needs
+// it too.
 func Init() Prep {
 	var P Prep
 	b, err := os.ReadFile("schema")
